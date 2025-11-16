@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:task8_ecommerce/models/product_model.dart';
+import 'checkout_page.dart';
 
 class ProductPage extends StatefulWidget {
   const ProductPage({super.key});
@@ -11,7 +12,9 @@ class ProductPage extends StatefulWidget {
 class _ProductPageState extends State<ProductPage> {
   int selectedIndex = 0;
   int currentNavIndex = 0;
+
   Set<Product> favoriteProducts = {};
+  List<Product> cart = [];
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +27,7 @@ class _ProductPageState extends State<ProductPage> {
 
       body: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: currentNavIndex == 0 ? _buildHome() : _buildFavorites(),
+        child: _getCurrentPage(),
       ),
 
       bottomNavigationBar: BottomNavigationBar(
@@ -39,9 +42,16 @@ class _ProductPageState extends State<ProductPage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Favorites"),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "Cart"),
         ],
       ),
     );
+  }
+
+  Widget _getCurrentPage() {
+    if (currentNavIndex == 0) return _buildHome();
+    if (currentNavIndex == 1) return _buildFavorites();
+    return _buildCart();
   }
 
   // ----------------------------------------------------------
@@ -58,7 +68,6 @@ class _ProductPageState extends State<ProductPage> {
         ),
         const SizedBox(height: 10),
 
-        // Category Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -75,7 +84,6 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  // CATEGORY BUTTON
   Widget _categoryButton(String title, int index) {
     final isSelected = selectedIndex == index;
 
@@ -93,7 +101,6 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  // PRODUCT GRID
   Widget _buildProductGrid() {
     List<Product> displayProducts;
 
@@ -113,7 +120,7 @@ class _ProductPageState extends State<ProductPage> {
         crossAxisCount: 2,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.75,
       ),
       itemBuilder: (context, index) {
         final product = displayProducts[index];
@@ -129,51 +136,50 @@ class _ProductPageState extends State<ProductPage> {
   Widget _buildProductCard(Product product) {
     final bool isFavorite = favoriteProducts.contains(product);
 
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.black12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              spreadRadius: 2,
-            )
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // PRODUCT IMAGE
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(product.image, fit: BoxFit.cover),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.black12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            spreadRadius: 2,
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // IMAGE
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(product.image, fit: BoxFit.cover),
             ),
+          ),
 
-            const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-            // PRODUCT NAME
-            Text(
-              product.name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+          // NAME
+          Text(
+            product.name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
 
-            // PRICE
-            Text(
-              "₱${product.price}",
-              style: const TextStyle(color: Colors.green, fontSize: 14),
-            ),
+          // PRICE
+          Text(
+            "₱${product.price}",
+            style: const TextStyle(color: Colors.green, fontSize: 14),
+          ),
 
-            // FAVORITE ICON BUTTON
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Favorite Button
+              IconButton(
                 icon: Icon(
                   isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: isFavorite ? Colors.red : Colors.grey,
@@ -188,39 +194,120 @@ class _ProductPageState extends State<ProductPage> {
                   });
                 },
               ),
-            )
-          ],
-        ),
+
+              // ADD TO CART BUTTON
+              IconButton(
+                icon: const Icon(Icons.add_shopping_cart, color: Colors.blue),
+                onPressed: () {
+                  setState(() {
+                    cart.add(product);
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("${product.name} added to cart!"),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ],
+          )
+        ],
       ),
     );
   }
 
   // ----------------------------------------------------------
-  // FAVORITES PAGE
+  // FAVORITES
   // ----------------------------------------------------------
 
   Widget _buildFavorites() {
     if (favoriteProducts.isEmpty) {
       return const Center(
-        child: Text(
-          "No favorite products yet.",
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-        ),
+        child: Text("No favorite products yet.",
+            style: TextStyle(fontSize: 18, color: Colors.grey)),
       );
     }
 
+    final items = favoriteProducts.toList();
+
     return GridView.builder(
-      itemCount: favoriteProducts.length,
+      itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.75,
       ),
       itemBuilder: (context, index) {
-        final product = favoriteProducts.toList()[index];
-        return _buildProductCard(product);
+        return _buildProductCard(items[index]);
       },
+    );
+  }
+
+  // ----------------------------------------------------------
+  // CART SYSTEM
+  // ----------------------------------------------------------
+
+  Widget _buildCart() {
+    if (cart.isEmpty) {
+      return const Center(
+        child: Text("Your cart is empty.",
+            style: TextStyle(fontSize: 18, color: Colors.grey)),
+      );
+    }
+
+    double total = 0;
+    for (var item in cart) {
+      total += double.parse(item.price);
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: cart.length,
+            itemBuilder: (context, index) {
+              final product = cart[index];
+              return ListTile(
+                leading: Image.asset(product.image, width: 50),
+                title: Text(product.name),
+                subtitle: Text("₱${product.price}"),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      cart.removeAt(index);
+                    });
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Checkout Button
+        Container(
+          padding: const EdgeInsets.all(15),
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CheckoutPage(totalAmount: total),
+                ),
+              );
+            },
+            child: Text(
+              "Checkout (₱${total.toStringAsFixed(2)})",
+              style: const TextStyle(fontSize: 18),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
